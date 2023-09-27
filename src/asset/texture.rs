@@ -1,6 +1,8 @@
 use anyhow::*;
 use image::GenericImageView;
 
+use super::Asset;
+
 pub struct Texture {
     pub texture: wgpu::Texture,
     pub view: wgpu::TextureView,
@@ -126,3 +128,5 @@ impl Texture {
         Self { texture, view, sampler }
     }
 }
+
+impl Asset for Texture {}

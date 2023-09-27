@@ -1,8 +1,6 @@
-use std::sync::Arc;
-
 use wgpu::util::DeviceExt;
 
-use crate::{asset::{texture::Texture, handle::Handle}, util::cast_slice, engine::vertex::Vertex};
+use crate::{engine::vertex::Vertex, util::cast_slice};
 
 static VERTICES: &[Vertex] = &[
     Vertex {
@@ -28,14 +26,13 @@ static INDICES: &[u16] = &[
     1, 2, 3
 ];
 
-pub struct Sprite {
-    texture: Handle<Texture>,
-    vertex_buffer: &'static wgpu::Buffer,
-    index_buffer: &'static wgpu::Buffer,
+pub struct SpriteMesh {
+    vertex_buffer: wgpu::Buffer,
+    index_buffer: wgpu::Buffer,
 }
 
-impl Sprite {
-    pub fn init(device: &wgpu::Device) -> (wgpu::Buffer, wgpu::Buffer) {
+impl SpriteMesh {
+    pub fn new(device: &wgpu::Device) -> Self {
         let vertex_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
                 label: Some("Vertex Buffer"),
@@ -52,16 +49,10 @@ impl Sprite {
             }
         );
 
-        (vertex_buffer, index_buffer)
-    }
-
-    pub fn new(texture: Handle<Texture>, vertex_buffer: &'static wgpu::Buffer, index_buffer: &'static wgpu::Buffer) -> Self {
-        
-        
         Self {
-            texture,
             vertex_buffer,
-            index_buffer,
+            index_buffer
         }
     }
 }
+
