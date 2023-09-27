@@ -1,6 +1,6 @@
-use crate::{asset::texture::Texture, objects::sprite::SpriteMesh};
+use crate::{asset::texture::Texture, objects::{sprite::{SpriteMesh, DrawSprite, Sprite}, camera::Camera}};
 
-use super::vertex::Vertex;
+use super::{vertex::Vertex, context::Context};
 
 pub struct Renderer {
     pub clear_color: wgpu::Color,
@@ -93,6 +93,52 @@ impl Renderer {
             texture_bind_group_layout,
             camera_bind_group_layout,
         }
+    }
+
+    pub fn draw(&mut self, context: &Context, camera: &Camera, sprite: &Sprite) -> Result<(), wgpu::SurfaceError> {
+        let output = context.surface.get_current_texture()?;
+        let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        let mut encoder = context.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("render_encoder")
+        });
+
+        {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Render Pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: 0.0,
+                            g: 0.0,
+                            b: 0.0,
+                            a: 1.0,
+                        }),
+                        store: true,
+                    },
+                })],
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                    view: &self.depth_texture.view,
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(1.0),
+                        store: true,
+                    }),
+                    stencil_ops: None,
+                }),
+            });
+
+            render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_bind_group(1, &camera.bind_group, &[]);
+
+            render_pass.draw_sprite(sprite);
+        }
+    
+        context.queue.submit(std::iter::once(encoder.finish()));
+        output.present();
+    
+        Ok(())
     }
 }
 

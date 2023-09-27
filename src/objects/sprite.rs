@@ -31,8 +31,8 @@ static INDICES: &[u16] = &[
 static INDEX_COUNT: u32 = INDICES.len() as u32;
 
 pub struct Sprite {
-    texture: Handle<Texture>,
-    mesh: Arc<SpriteMesh>
+    pub texture: Handle<Texture>,
+    pub mesh: Arc<SpriteMesh>
 }
 
 impl Sprite {
