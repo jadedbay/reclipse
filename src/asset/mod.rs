@@ -1,6 +1,7 @@
 pub mod texture;
 
 pub mod asset_manager;
+pub mod primitives;
 
 pub mod handle;
 

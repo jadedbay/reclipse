@@ -7,6 +7,7 @@ pub mod asset;
 pub mod engine;
 pub mod util;
 pub mod scene;
+pub mod transform;
 
 
 fn main() {

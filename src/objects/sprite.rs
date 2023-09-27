@@ -3,11 +3,12 @@ use std::sync::Arc;
 use once_cell::sync::OnceCell;
 use wgpu::util::DeviceExt;
 
-use crate::{asset::{texture::Texture, handle::Handle}, util::cast_slice, engine::vertex::Vertex};
+use crate::{asset::{texture::Texture, handle::Handle}, util::cast_slice, engine::{vertex::Vertex, gpu_resource::GpuResource}, transform::Transform};
 
 pub struct Sprite {
     pub texture: Handle<Texture>,
-    pub mesh: Arc<SpriteMesh>
+    pub mesh: Arc<SpriteMesh>,
+    //pub transform: GpuResource<Transform>,
 }
 
 impl Sprite {

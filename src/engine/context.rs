@@ -3,15 +3,12 @@ use std::sync::Arc;
 use crate::window::Window;
 
 pub struct Context {
-    pub extent: wgpu::Extent3d,
-    pub surface: wgpu::Surface,
-    pub device: Arc<wgpu::Device>,
-    pub queue: Arc<wgpu::Queue>,
-    pub config: wgpu::SurfaceConfiguration,
+    pub device: wgpu::Device,
+    pub queue: wgpu::Queue,
 }
 
 impl Context {
-    pub async fn new(window: &Window) -> Self {
+    pub async fn new(window: &Window) -> (Arc<Self>, Surface) {
         let extent = wgpu::Extent3d {
             width: window.window.inner_size().width,
             height: window.window.inner_size().height,
@@ -43,10 +40,6 @@ impl Context {
             },
             None,
         ).await.unwrap();
-
-
-        let queue = Arc::new(queue);
-        let device = Arc::new(device);
         
         dbg!(adapter.get_info());
 
@@ -68,13 +61,14 @@ impl Context {
         };
         surface.configure(&device, &config);
 
-        Self {
-            extent,
-            surface,
+        (Arc::new(Self {
             device,
             queue,
+        }), Surface {
+            extent,
+            surface,
             config,
-        }
+        })
     }
 }
 
@@ -128,4 +122,10 @@ pub fn create_render_pipeline(
         },
         multiview: None
     })
+}
+
+pub struct Surface {
+    pub extent: wgpu::Extent3d,
+    pub surface: wgpu::Surface,
+    pub config: wgpu::SurfaceConfiguration,
 }

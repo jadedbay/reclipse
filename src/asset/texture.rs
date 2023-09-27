@@ -18,19 +18,17 @@ impl Texture {
     pub fn from_bytes(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        renderer: &Renderer,
         bytes: &[u8],
         label: &str,
         is_normal_map: bool,
     ) -> Result<Self> {
         let img = image::load_from_memory(bytes)?;
-        Self::from_image(device, queue, renderer, &img, Some(label), is_normal_map)
+        Self::from_image(device, queue, &img, Some(label), is_normal_map)
     }
 
     pub fn from_image(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        renderer: &Renderer,
         img: &image::DynamicImage,
         label: Option<&str>,
         is_normal_map: bool,
@@ -90,7 +88,7 @@ impl Texture {
 
         let bind_group = device.create_bind_group(
             &wgpu::BindGroupDescriptor {
-                layout: &renderer.texture_bind_group_layout,
+                layout: &Renderer::get_texture_layout(),
                 entries: &[
                     wgpu::BindGroupEntry {
                         binding: 0,

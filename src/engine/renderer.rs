@@ -1,16 +1,21 @@
-use crate::{asset::texture::Texture, objects::{sprite::{SpriteMesh, DrawSprite, Sprite}, camera::Camera}};
+use std::sync::{Mutex, Arc};
 
-use super::{vertex::Vertex, context::Context};
+use once_cell::sync::Lazy;
+
+use crate::{asset::texture::Texture, objects::{sprite::{DrawSprite, Sprite}, camera::Camera}};
+
+use super::{vertex::Vertex, context::{Context, Surface}};
 
 pub struct Renderer {
     pub clear_color: wgpu::Color,
     pub texture_view: wgpu::TextureView,
     pub depth_texture: Texture,
     pub render_pipeline: wgpu::RenderPipeline,
-
-    pub texture_bind_group_layout: wgpu::BindGroupLayout,
-    pub camera_bind_group_layout: wgpu::BindGroupLayout,
 }
+
+static TEXTURE_LAYOUT: Lazy<Mutex<Option<Arc<wgpu::BindGroupLayout>>>> = Lazy::new(|| Mutex::new(None));
+static CAMERA_LAYOUT: Lazy<Mutex<Option<Arc<wgpu::BindGroupLayout>>>> = Lazy::new(|| Mutex::new(None));
+static TRANSFORM_LAYOUT: Lazy<Mutex<Option<Arc<wgpu::BindGroupLayout>>>> = Lazy::new(|| Mutex::new(None));
 
 impl Renderer {
     pub fn new(
@@ -22,8 +27,8 @@ impl Renderer {
 
         let (texture_view, depth_texture) = create_depth_texture(device, config, extent);
 
-        let texture_bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        let mut texture_layout = TEXTURE_LAYOUT.lock().unwrap();
+        *texture_layout = Some(Arc::new(device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 entries: &[
                     wgpu::BindGroupLayoutEntry {
                         binding: 0,
@@ -43,9 +48,10 @@ impl Renderer {
                     },
                 ],
                 label: Some("texture_bind_group_layout"),
-            });
+            })));
 
-        let camera_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        let mut camera_layout = CAMERA_LAYOUT.lock().unwrap();
+        *camera_layout = Some(Arc::new(device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: &[
                 wgpu::BindGroupLayoutEntry {
                     binding: 0,
@@ -59,13 +65,30 @@ impl Renderer {
                 }
             ],
             label: Some("camera_bind_group_layout"),
-        });
+        })));
+
+        let mut transform_layout = TRANSFORM_LAYOUT.lock().unwrap();
+        *transform_layout = Some(Arc::new(device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }
+            ],
+            label: None,
+        })));
 
         let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
             bind_group_layouts: &[
-                &texture_bind_group_layout,
-                &camera_bind_group_layout,
+                &texture_layout.as_ref().unwrap(),
+                &camera_layout.as_ref().unwrap(),
             ],
             push_constant_ranges: &[],
         });
@@ -90,13 +113,23 @@ impl Renderer {
             texture_view,
             depth_texture,
             render_pipeline,
-            texture_bind_group_layout,
-            camera_bind_group_layout,
         }
     }
 
-    pub fn draw(&mut self, context: &Context, camera: &Camera, sprite: &Sprite) -> Result<(), wgpu::SurfaceError> {
-        let output = context.surface.get_current_texture()?;
+    pub fn get_texture_layout() -> Arc<wgpu::BindGroupLayout> {
+        TEXTURE_LAYOUT.lock().unwrap().as_ref().unwrap().clone()
+    }
+
+    pub fn get_camera_layout() -> Arc<wgpu::BindGroupLayout> {
+        CAMERA_LAYOUT.lock().unwrap().as_ref().unwrap().clone()
+    }
+
+    pub fn get_transform_layout() -> Arc<wgpu::BindGroupLayout> {
+        TRANSFORM_LAYOUT.lock().unwrap().as_ref().unwrap().clone()
+    }
+
+    pub fn draw(&mut self, context: &Context, surface: &Surface, camera: &Camera, sprite: &Sprite) -> Result<(), wgpu::SurfaceError> {
+        let output = surface.surface.get_current_texture()?;
         let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
         let mut encoder = context.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {

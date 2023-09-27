@@ -2,10 +2,11 @@ use std::sync::Arc;
 
 use winit::event_loop::ControlFlow;
 
-use crate::{window::{Window, Events}, engine::{context::Context, renderer::Renderer, input::InputState}, asset::{texture::Texture, handle::Handle}, objects::{sprite::{Sprite, DrawSprite, SpriteMesh}, camera::{Camera, Projection, CameraController}}, util::cast_slice};
+use crate::{window::{Window, Events}, engine::{context::{Context, Surface, self}, renderer::Renderer, input::InputState}, asset::{texture::Texture, handle::Handle}, objects::{sprite::{Sprite, DrawSprite, SpriteMesh}, camera::{Camera, Projection, CameraController}}, util::cast_slice};
 
 pub struct App {
-    context: Context,
+    context: Arc<Context>,
+    surface: Surface,
     renderer: Renderer,
     camera: Camera,
     camera_controller: CameraController,
@@ -16,22 +17,23 @@ pub struct App {
 
 impl App {
     pub async fn new(window: &Window) -> Self {
-        let context = Context::new(window).await;
-        let renderer = Renderer::new(&context.device, &context.config, &context.extent);
+        let (context, surface) = Context::new(window).await;
+        let renderer = Renderer::new(&context.device, &surface.config, &surface.extent);
         
-        let texture = Arc::new(Texture::from_bytes(&context.device, &context.queue, &renderer, include_bytes!("../res/textures/stone_bricks.jpg"), "stone_bricks.jpg", false).unwrap());
+        let texture = Arc::new(Texture::from_bytes(&context.device, &context.queue, include_bytes!("../res/textures/stone_bricks.jpg"), "stone_bricks.jpg", false).unwrap());
         
         SpriteMesh::load(&context.device);
         let sprite = Sprite::new(Handle::new(texture));
         
-        let camera = Camera::new(&context.device, &renderer.camera_bind_group_layout, (0.0, 0.0, 5.0), cg::Deg(-90.0), cg::Deg(0.0), 
-            Projection::new(context.config.width, context.config.height, cg::Deg(45.0), 0.1, 100.0));
+        let camera = Camera::new(&context.device, &Renderer::get_camera_layout(), (0.0, 0.0, 5.0), cg::Deg(-90.0), cg::Deg(0.0), 
+            Projection::new(surface.config.width, surface.config.height, cg::Deg(45.0), 0.1, 100.0));
         let camera_controller = CameraController::new(4.0, 0.5);
 
         let input = InputState::default();
 
         Self {
             context,
+            surface,
             renderer,
             camera,
             camera_controller,
@@ -43,12 +45,12 @@ impl App {
 
     pub fn resize(&mut self, new_size: [u32; 2]) {
         if new_size[0] > 0 && new_size[1] > 0 {
-            self.context.config.width = new_size[0];
-            self.context.config.height = new_size[1];
-            self.context.surface.configure(&self.context.device, &self.context.config);
+            self.surface.config.width = new_size[0];
+            self.surface.config.height = new_size[1];
+            self.surface.surface.configure(&self.context.device, &self.surface.config);
         }
 
-        self.renderer.depth_texture = Texture::create_depth_texture(&self.context.device, &self.context.config, "depth_texture");
+        self.renderer.depth_texture = Texture::create_depth_texture(&self.context.device, &self.surface.config, "depth_texture");
         self.camera.projection.resize(new_size[0], new_size[1]);
     }
 
@@ -56,11 +58,10 @@ impl App {
         self.camera_controller.update_camera(&mut self.camera, dt, &self.input);
         self.camera.update_uniform();
         self.context.queue.write_buffer(&self.camera.buffer, 0, cast_slice(&[self.camera.uniform]));
-
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
-        self.renderer.draw(&self.context, &self.camera, &self.sprite)
+        self.renderer.draw(&self.context, &self.surface, &self.camera, &self.sprite)
     }
 }
 
@@ -84,7 +85,7 @@ pub async fn run() {
 
             match app.render() {
                 Ok(_) => {}
-                Err(wgpu::SurfaceError::Lost) => app.resize([app.context.extent.width, app.context.extent.height]),
+                Err(wgpu::SurfaceError::Lost) => app.resize([app.surface.extent.width, app.surface.extent.height]),
                 Err(wgpu::SurfaceError::OutOfMemory) => *control_flow.unwrap() = ControlFlow::Exit,
                 Err(e) => eprintln!("{:?}", e),
             }
