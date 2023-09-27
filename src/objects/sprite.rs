@@ -29,7 +29,7 @@ impl<'a, 'b> DrawSprite<'b> for wgpu::RenderPass<'a>
 where 'b: 'a,
 {
     fn draw_sprite(&mut self, sprite: &'a Sprite) {
-        self.set_bind_group(0, &sprite.texture.bind_group, &[]);
+        self.set_bind_group(0, &sprite.texture.asset.bind_group.as_ref().unwrap(), &[]);
         self.set_vertex_buffer(0, sprite.mesh.vertex_buffer.slice(..));
         self.set_index_buffer(sprite.mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
         self.draw_indexed(0..sprite.mesh.index_count, 0, 0..1);

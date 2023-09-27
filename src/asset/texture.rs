@@ -1,12 +1,15 @@
 use anyhow::*;
 use image::GenericImageView;
 
+use crate::engine::renderer::Renderer;
+
 use super::Asset;
 
 pub struct Texture {
     pub texture: wgpu::Texture,
     pub view: wgpu::TextureView,
     pub sampler: wgpu::Sampler,
+    pub bind_group: Option<wgpu::BindGroup>,
 }
 
 impl Texture {
@@ -15,17 +18,19 @@ impl Texture {
     pub fn from_bytes(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
+        renderer: &Renderer,
         bytes: &[u8],
         label: &str,
         is_normal_map: bool,
     ) -> Result<Self> {
         let img = image::load_from_memory(bytes)?;
-        Self::from_image(device, queue, &img, Some(label), is_normal_map)
+        Self::from_image(device, queue, renderer, &img, Some(label), is_normal_map)
     }
 
     pub fn from_image(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
+        renderer: &Renderer,
         img: &image::DynamicImage,
         label: Option<&str>,
         is_normal_map: bool,
@@ -83,10 +88,28 @@ impl Texture {
             ..Default::default()
         });
 
+        let bind_group = device.create_bind_group(
+            &wgpu::BindGroupDescriptor {
+                layout: &renderer.texture_bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&sampler),
+                    }
+                ],
+                label: Some("texture_bind_group"),
+            }
+        );
+
         Ok(Self {
             texture,
             view,
             sampler,
+            bind_group: Some(bind_group),
         })
     }
 
@@ -125,7 +148,7 @@ impl Texture {
             }
         );
 
-        Self { texture, view, sampler }
+        Self { texture, view, sampler, bind_group: None }
     }
 }
 

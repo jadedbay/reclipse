@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use winit::event_loop::ControlFlow;
 
-use crate::{window::{Window, Events}, engine::{context::Context, renderer::Renderer, vertex::Vertex, input::InputState}, asset::{texture, handle::Handle}, objects::{sprite::{Sprite, DrawSprite, SpriteMesh}, camera::{Camera, Projection, CameraController}}, util::cast_slice};
+use crate::{window::{Window, Events}, engine::{context::Context, renderer::Renderer, input::InputState}, asset::{texture::Texture, handle::Handle}, objects::{sprite::{Sprite, DrawSprite, SpriteMesh}, camera::{Camera, Projection, CameraController}}, util::cast_slice};
 
 pub struct App {
     context: Context,
@@ -19,10 +19,10 @@ impl App {
         let context = Context::new(window).await;
         let renderer = Renderer::new(&context.device, &context.config, &context.extent);
         
-        let texture = texture::Texture::from_bytes(&context.device, &context.queue, include_bytes!("../res/textures/stone_bricks.jpg"), "stone_bricks.jpg", false).unwrap();
+        let texture = Arc::new(Texture::from_bytes(&context.device, &context.queue, &renderer, include_bytes!("../res/textures/stone_bricks.jpg"), "stone_bricks.jpg", false).unwrap());
         
         SpriteMesh::load(&context.device);
-        let sprite = Sprite::new(Handle::new(&context.device, &renderer, texture));
+        let sprite = Sprite::new(Handle::new(texture));
         
         let camera = Camera::new(&context.device, &renderer.camera_bind_group_layout, (0.0, 0.0, 5.0), cg::Deg(-90.0), cg::Deg(0.0), 
             Projection::new(context.config.width, context.config.height, cg::Deg(45.0), 0.1, 100.0));
@@ -48,7 +48,7 @@ impl App {
             self.context.surface.configure(&self.context.device, &self.context.config);
         }
 
-        self.renderer.depth_texture = texture::Texture::create_depth_texture(&self.context.device, &self.context.config, "depth_texture");
+        self.renderer.depth_texture = Texture::create_depth_texture(&self.context.device, &self.context.config, "depth_texture");
         self.camera.projection.resize(new_size[0], new_size[1]);
     }
 
