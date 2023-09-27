@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use winit::event_loop::ControlFlow;
 
-use crate::{window::{Window, Events}, engine::{context::Context, renderer::Renderer, vertex::Vertex, input::InputState}, asset::texture, objects::{sprite::Sprite, camera::{Camera, Projection, CameraController}}, util::cast_slice};
+use crate::{window::{Window, Events}, engine::{context::Context, renderer::Renderer, vertex::Vertex, input::InputState}, asset::{texture, handle::Handle}, objects::{sprite::{Sprite, DrawSprite, SpriteMesh}, camera::{Camera, Projection, CameraController}}, util::cast_slice};
 
 pub struct App {
     context: Context,
@@ -9,9 +11,9 @@ pub struct App {
     camera_controller: CameraController,
     input: InputState,
 
-    texture_bind_group: wgpu::BindGroup,
-
     sprite: Sprite,
+
+    sprite_mesh: Arc<SpriteMesh>,
 }
 
 impl App {
@@ -19,27 +21,10 @@ impl App {
         let context = Context::new(window).await;
         let renderer = Renderer::new(&context.device, &context.config, &context.extent);
         
-        let texture = texture::Texture::from_bytes(&context.device, &context.queue, include_bytes!("../res/stone_bricks.jpg"), "stone_bricks.jpg", false).unwrap();
+        let texture = texture::Texture::from_bytes(&context.device, &context.queue, include_bytes!("../res/textures/stone_bricks.jpg"), "stone_bricks.jpg", false).unwrap();
         
-        let (vertex_buffer, index_buffer) = Sprite::init(&context.device);
-        let sprite = Sprite::new(texture, &vertex_buffer, &index_buffer);
-
-        let texture_bind_group = context.device.create_bind_group(
-            &wgpu::BindGroupDescriptor {
-                layout: &renderer.texture_bind_group_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: wgpu::BindingResource::TextureView(&texture.view),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: wgpu::BindingResource::Sampler(&texture.sampler),
-                    }
-                ],
-                label: Some("diffuse_bind_group"),
-            }
-        );
+        let sprite_mesh = Arc::new(SpriteMesh::new(&context.device));
+        let sprite = Sprite::new(Handle::new(&context.device, &renderer, texture), sprite_mesh.clone());
         
         let camera = Camera::new(&context.device, &renderer.camera_bind_group_layout, (0.0, 0.0, 10.0), cg::Deg(-90.0), cg::Deg(0.0), 
             Projection::new(context.config.width, context.config.height, cg::Deg(45.0), 0.1, 100.0));
@@ -54,8 +39,8 @@ impl App {
             camera_controller,
             input,
 
-            texture_bind_group,
-            sprite 
+            sprite,
+            sprite_mesh,
         }
     }
 
@@ -112,11 +97,8 @@ impl App {
             });
 
             render_pass.set_pipeline(&self.renderer.render_pipeline);
-            render_pass.set_bind_group(0, &self.texture_bind_group, &[]);
             render_pass.set_bind_group(1, &self.camera.bind_group, &[]);
-            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-            render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-            render_pass.draw_indexed(0..self.index_count, 0, 0..1);
+            render_pass.draw_sprite(&self.sprite);
         }
     
         self.context.queue.submit(std::iter::once(encoder.finish()));

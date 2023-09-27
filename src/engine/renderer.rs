@@ -1,4 +1,4 @@
-use crate::asset::texture::Texture;
+use crate::{asset::texture::Texture, objects::sprite::SpriteMesh};
 
 use super::vertex::Vertex;
 

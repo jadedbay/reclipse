@@ -28,14 +28,45 @@ static INDICES: &[u16] = &[
     1, 2, 3
 ];
 
+static INDEX_COUNT: u32 = INDICES.len() as u32;
+
 pub struct Sprite {
     texture: Handle<Texture>,
-    vertex_buffer: &'static wgpu::Buffer,
-    index_buffer: &'static wgpu::Buffer,
+    mesh: Arc<SpriteMesh>
 }
 
 impl Sprite {
-    pub fn init(device: &wgpu::Device) -> (wgpu::Buffer, wgpu::Buffer) {
+    pub fn new(texture: Handle<Texture>, mesh: Arc<SpriteMesh>) -> Self {
+        Self {
+            texture,
+            mesh,
+        }
+    }
+}
+
+pub trait DrawSprite<'a> {
+    fn draw_sprite(&mut self, sprite: &'a Sprite);
+}
+
+impl<'a, 'b> DrawSprite<'b> for wgpu::RenderPass<'a>
+where 'b: 'a,
+{
+    fn draw_sprite(&mut self, sprite: &'a Sprite) {
+        self.set_bind_group(0, &sprite.texture.bind_group, &[]);
+        self.set_vertex_buffer(0, sprite.mesh.vertex_buffer.slice(..));
+        self.set_index_buffer(sprite.mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+        self.draw_indexed(0..sprite.mesh.index_count, 0, 0..1);
+    }
+}
+
+pub struct SpriteMesh {
+    pub vertex_buffer: wgpu::Buffer,
+    pub index_buffer: wgpu::Buffer,
+    pub index_count: u32,
+}
+
+impl SpriteMesh {
+    pub fn new(device: &wgpu::Device) -> Self {
         let vertex_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
                 label: Some("Vertex Buffer"),
@@ -52,16 +83,11 @@ impl Sprite {
             }
         );
 
-        (vertex_buffer, index_buffer)
-    }
 
-    pub fn new(texture: Handle<Texture>, vertex_buffer: &'static wgpu::Buffer, index_buffer: &'static wgpu::Buffer) -> Self {
-        
-        
         Self {
-            texture,
             vertex_buffer,
             index_buffer,
+            index_count: INDEX_COUNT,
         }
     }
 }

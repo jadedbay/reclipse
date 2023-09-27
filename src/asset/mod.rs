@@ -1,5 +1,4 @@
 pub mod texture;
-pub mod sprite_mesh;
 
 pub mod asset_manager;
 
