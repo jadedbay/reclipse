@@ -5,32 +5,6 @@ use wgpu::util::DeviceExt;
 
 use crate::{asset::{texture::Texture, handle::Handle}, util::cast_slice, engine::vertex::Vertex};
 
-static VERTICES: &[Vertex] = &[
-    Vertex {
-        position: [-0.5, -0.5, 0.0],
-        tex_coords: [0.0, 0.0],
-    },
-    Vertex {
-        position: [0.5, -0.5, 0.0],
-        tex_coords: [1.0, 0.0],
-    },
-    Vertex {
-        position: [0.5, 0.5, 0.0],
-        tex_coords: [1.0, 1.0],
-    },
-    Vertex {
-        position: [-0.5, 0.5, 0.0],
-        tex_coords: [0.0, 1.0],
-    },
-];
-
-static INDICES: &[u16] = &[
-    0, 1, 3,
-    1, 2, 3
-];
-
-static INDEX_COUNT: u32 = INDICES.len() as u32;
-
 pub struct Sprite {
     pub texture: Handle<Texture>,
     pub mesh: Arc<SpriteMesh>
@@ -63,6 +37,32 @@ where 'b: 'a,
 }
 
 static SPRITE_MESH: OnceCell<Arc<SpriteMesh>> = OnceCell::new();
+
+static VERTICES: &[Vertex] = &[
+    Vertex {
+        position: [-0.5, -0.5, 0.0],
+        tex_coords: [0.0, 0.0],
+    },
+    Vertex {
+        position: [0.5, -0.5, 0.0],
+        tex_coords: [1.0, 0.0],
+    },
+    Vertex {
+        position: [0.5, 0.5, 0.0],
+        tex_coords: [1.0, 1.0],
+    },
+    Vertex {
+        position: [-0.5, 0.5, 0.0],
+        tex_coords: [0.0, 1.0],
+    },
+];
+
+static INDICES: &[u16] = &[
+    0, 1, 3,
+    1, 2, 3
+];
+
+static INDEX_COUNT: u32 = INDICES.len() as u32;
 
 pub struct SpriteMesh {
     pub vertex_buffer: wgpu::Buffer,

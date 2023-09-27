@@ -24,7 +24,7 @@ impl Handle<Texture> {
                         resource: wgpu::BindingResource::Sampler(&texture.sampler),
                     }
                 ],
-                label: Some("diffuse_bind_group"),
+                label: Some("texture_bind_group"),
             }
         );
 
