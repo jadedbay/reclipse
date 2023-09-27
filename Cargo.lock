@@ -1323,6 +1323,7 @@ dependencies = [
  "image",
  "instant",
  "log",
+ "once_cell",
  "pollster",
  "serde",
  "serde_yaml",

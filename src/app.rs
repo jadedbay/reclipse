@@ -12,8 +12,6 @@ pub struct App {
     input: InputState,
 
     sprite: Sprite,
-
-    sprite_mesh: Arc<SpriteMesh>,
 }
 
 impl App {
@@ -23,10 +21,10 @@ impl App {
         
         let texture = texture::Texture::from_bytes(&context.device, &context.queue, include_bytes!("../res/textures/stone_bricks.jpg"), "stone_bricks.jpg", false).unwrap();
         
-        let sprite_mesh = Arc::new(SpriteMesh::new(&context.device));
-        let sprite = Sprite::new(Handle::new(&context.device, &renderer, texture), sprite_mesh.clone());
+        SpriteMesh::load(&context.device);
+        let sprite = Sprite::new(Handle::new(&context.device, &renderer, texture));
         
-        let camera = Camera::new(&context.device, &renderer.camera_bind_group_layout, (0.0, 0.0, 10.0), cg::Deg(-90.0), cg::Deg(0.0), 
+        let camera = Camera::new(&context.device, &renderer.camera_bind_group_layout, (0.0, 0.0, 5.0), cg::Deg(-90.0), cg::Deg(0.0), 
             Projection::new(context.config.width, context.config.height, cg::Deg(45.0), 0.1, 100.0));
         let camera_controller = CameraController::new(4.0, 0.5);
 
@@ -40,7 +38,6 @@ impl App {
             input,
 
             sprite,
-            sprite_mesh,
         }
     }
 

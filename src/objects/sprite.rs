@@ -1,24 +1,25 @@
 use std::sync::Arc;
 
+use once_cell::sync::OnceCell;
 use wgpu::util::DeviceExt;
 
 use crate::{asset::{texture::Texture, handle::Handle}, util::cast_slice, engine::vertex::Vertex};
 
 static VERTICES: &[Vertex] = &[
     Vertex {
-        position: [0.0, 0.0, 0.0],
+        position: [-0.5, -0.5, 0.0],
         tex_coords: [0.0, 0.0],
     },
     Vertex {
-        position: [1.0, 0.0, 0.0],
+        position: [0.5, -0.5, 0.0],
         tex_coords: [1.0, 0.0],
     },
     Vertex {
-        position: [1.0, 1.0, 0.0],
+        position: [0.5, 0.5, 0.0],
         tex_coords: [1.0, 1.0],
     },
     Vertex {
-        position: [0.0, 1.0, 0.0],
+        position: [-0.5, 0.5, 0.0],
         tex_coords: [0.0, 1.0],
     },
 ];
@@ -36,10 +37,12 @@ pub struct Sprite {
 }
 
 impl Sprite {
-    pub fn new(texture: Handle<Texture>, mesh: Arc<SpriteMesh>) -> Self {
+    pub fn new(texture: Handle<Texture>) -> Self {
+        let mesh = SPRITE_MESH.get().unwrap();
+
         Self {
             texture,
-            mesh,
+            mesh: mesh.clone(),
         }
     }
 }
@@ -59,6 +62,8 @@ where 'b: 'a,
     }
 }
 
+static SPRITE_MESH: OnceCell<Arc<SpriteMesh>> = OnceCell::new();
+
 pub struct SpriteMesh {
     pub vertex_buffer: wgpu::Buffer,
     pub index_buffer: wgpu::Buffer,
@@ -66,7 +71,7 @@ pub struct SpriteMesh {
 }
 
 impl SpriteMesh {
-    pub fn new(device: &wgpu::Device) -> Self {
+    pub fn load(device: &wgpu::Device) {
         let vertex_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
                 label: Some("Vertex Buffer"),
@@ -84,10 +89,12 @@ impl SpriteMesh {
         );
 
 
-        Self {
+        let mesh = Self {
             vertex_buffer,
             index_buffer,
             index_count: INDEX_COUNT,
-        }
+        };
+
+        let _ = SPRITE_MESH.set(Arc::new(mesh));
     }
 }
