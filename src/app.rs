@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use winit::event_loop::ControlFlow;
 
-use crate::{window::{Window, Events}, engine::{context::{Context, Surface, self}, renderer::Renderer, input::InputState}, asset::{texture::Texture, handle::Handle}, objects::{sprite::{Sprite, DrawSprite, SpriteMesh}, camera::{Camera, Projection, CameraController}}, util::cast_slice};
+use crate::{window::{Window, Events}, engine::{context::{Context, Surface, self}, renderer::Renderer, input::InputState}, asset::{texture::Texture, handle::Handle, primitives::Primitives}, objects::{sprite::{Sprite, DrawSprite}, camera::{Camera, Projection, CameraController}}, util::cast_slice};
 
 pub struct App {
     context: Arc<Context>,
@@ -12,6 +12,8 @@ pub struct App {
     camera_controller: CameraController,
     input: InputState,
 
+    primitives: Primitives,
+
     sprite: Sprite,
 }
 
@@ -19,11 +21,11 @@ impl App {
     pub async fn new(window: &Window) -> Self {
         let (context, surface) = Context::new(window).await;
         let renderer = Renderer::new(&context.device, &surface.config, &surface.extent);
+        let primitives = Primitives::new(&context);
         
         let texture = Arc::new(Texture::from_bytes(&context.device, &context.queue, include_bytes!("../res/textures/stone_bricks.jpg"), "stone_bricks.jpg", false).unwrap());
         
-        SpriteMesh::load(&context.device);
-        let sprite = Sprite::new(Handle::new(texture));
+        let sprite = Sprite::new(Handle::new(texture), &primitives);
         
         let camera = Camera::new(&context.device, &Renderer::get_camera_layout(), (0.0, 0.0, 5.0), cg::Deg(-90.0), cg::Deg(0.0), 
             Projection::new(surface.config.width, surface.config.height, cg::Deg(45.0), 0.1, 100.0));
@@ -38,6 +40,8 @@ impl App {
             camera,
             camera_controller,
             input,
+
+            primitives,
 
             sprite,
         }
