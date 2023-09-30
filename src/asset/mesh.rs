@@ -33,3 +33,18 @@ impl Mesh {
         }
     }
 }
+
+pub trait DrawMesh<'a> {
+    fn draw_mesh(&mut self, mesh: &'a Mesh);
+}
+
+impl<'a, 'b> DrawMesh<'b> for wgpu::RenderPass<'a>
+where
+    'b: 'a,
+{
+    fn draw_mesh(&mut self, mesh: &'b Mesh) {
+        self.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
+        self.set_index_buffer(mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+        self.draw_indexed(0..mesh.index_count, 0, 0..1);
+    }
+}

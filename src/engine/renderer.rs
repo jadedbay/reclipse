@@ -2,7 +2,7 @@ use std::sync::{Mutex, Arc};
 
 use once_cell::sync::Lazy;
 
-use crate::{asset::texture::Texture, objects::{sprite::{DrawSprite, Sprite}, camera::Camera}};
+use crate::{asset::texture::Texture, objects::{entity::{DrawEntity, Entity}, camera::Camera}};
 
 use super::{vertex::Vertex, context::{Context, Surface}};
 
@@ -128,7 +128,7 @@ impl Renderer {
         TRANSFORM_LAYOUT.lock().unwrap().as_ref().unwrap().clone()
     }
 
-    pub fn draw(&mut self, context: &Context, surface: &Surface, camera: &Camera, sprite: &Sprite) -> Result<(), wgpu::SurfaceError> {
+    pub fn draw(&mut self, context: &Context, surface: &Surface, camera: &Camera, entity: &Entity) -> Result<(), wgpu::SurfaceError> {
         let output = surface.surface.get_current_texture()?;
         let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
@@ -165,7 +165,7 @@ impl Renderer {
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(1, &camera.bind_group, &[]);
 
-            render_pass.draw_sprite(sprite);
+            render_pass.draw_entity(entity);
         }
     
         context.queue.submit(std::iter::once(encoder.finish()));
