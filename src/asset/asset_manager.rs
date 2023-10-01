@@ -1,4 +1,4 @@
-use std::{sync::{Arc, mpsc::{self, Receiver}}, collections::HashMap, any::TypeId, pin::Pin};
+use std::{sync::{Arc, mpsc::{self, Receiver}}, collections::{HashMap, HashSet}, any::TypeId, pin::Pin};
 
 use futures::{Future, FutureExt};
 
@@ -16,7 +16,7 @@ pub struct AssetManager {
 
     meshes: AssetPool<Mesh>,
     textures: AssetPool<Texture>,
-    paths: HashMap<&'static str, usize>,
+    paths: HashMap<String, usize>,
 
     pending: Vec<Receiver<(usize, AssetType)>>,
 
@@ -47,15 +47,18 @@ impl AssetManager {
         if let Some(&asset_id) = self.paths.get(file_path) {
             Handle::<T>::new(asset_id)
         } else {
+            let file_path = file_path.to_owned();
             let asset_id = self.get_new_id();
-            let context = Arc::clone(&self.context);
+            self.paths.insert(file_path.clone(), asset_id);
 
+            let context = Arc::clone(&self.context);
             let (tx, rx) = mpsc::channel();
             self.pending.push(rx);
 
+            println!("loading: {}", &file_path);
+
             match TypeId::of::<T>() {
                 id if id == TypeId::of::<Texture>() => {
-                    let file_path = file_path.to_owned();
                     let future = async move {
                         let texture = Texture::load(&context, &file_path).await;
                         tx.send((asset_id, AssetType::Texture(texture))).unwrap();
@@ -63,7 +66,6 @@ impl AssetManager {
                     tokio::spawn(future);
                 },
                 id if id == TypeId::of::<Mesh>() => {
-                    let file_path = file_path.to_owned();
                     let future = async move {
                         let mesh = Mesh::load(&context, &file_path).await;
                         tx.send((asset_id, AssetType::Mesh(mesh))).unwrap();
