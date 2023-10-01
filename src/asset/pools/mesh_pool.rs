@@ -1,21 +1,21 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::asset::mesh::Mesh;
+use crate::asset::primitives::quad;
 use crate::engine::context::Context;
 
-use super::mesh::Mesh;
-use super::primitives::quad;
+use super::AssetPool;
 
-pub struct MeshPool {
-    meshes: HashMap<usize, Arc<Mesh>>,
-}
 
-impl MeshPool {
+impl AssetPool<Mesh> {
     pub fn new(context: &Context) -> Self {
         let meshes = Self::load_primitives(context);
+        let default = meshes.get(&0).unwrap().clone();
 
         Self {
-            meshes,
+            assets: meshes,
+            default,
         }
     }
 
@@ -26,9 +26,5 @@ impl MeshPool {
         meshes.insert(0, quad);
 
         meshes
-    } 
-
-    pub fn get_mesh(&self, mesh_id: usize) -> Arc<Mesh> {
-        self.meshes.get(&mesh_id).unwrap().clone()
     }
 }

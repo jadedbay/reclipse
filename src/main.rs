@@ -9,7 +9,7 @@ pub mod util;
 pub mod scene;
 pub mod transform;
 
-
-fn main() {
-    pollster::block_on(run());
+#[tokio::main]
+async fn main() {
+    run().await
 }

@@ -1,7 +1,10 @@
-use anyhow::*;
+use std::sync::Arc;
+
+use anyhow::Result;
+use async_trait::async_trait;
 use image::GenericImageView;
 
-use crate::engine::renderer::Renderer;
+use crate::engine::{renderer::Renderer, context::Context};
 
 use super::Asset;
 
@@ -16,21 +19,17 @@ impl Texture {
     pub const DEPTH_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth32Float;
 
     pub fn from_bytes(
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        context: &Context,
         bytes: &[u8],
-        label: &str,
         is_normal_map: bool,
     ) -> Result<Self> {
         let img = image::load_from_memory(bytes)?;
-        Self::from_image(device, queue, &img, Some(label), is_normal_map)
+        Self::from_image(context, &img, is_normal_map)
     }
 
     pub fn from_image(
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        context: &Context,
         img: &image::DynamicImage,
-        label: Option<&str>,
         is_normal_map: bool,
     ) -> Result<Self> {
         let rgba = img.to_rgba8();
@@ -48,8 +47,8 @@ impl Texture {
             wgpu::TextureFormat::Rgba8UnormSrgb
         };
 
-        let texture = device.create_texture(&wgpu::TextureDescriptor {
-            label,
+        let texture = context.device.create_texture(&wgpu::TextureDescriptor {
+            label: None,
             size,
             mip_level_count: 1,
             sample_count: 1,
@@ -59,7 +58,7 @@ impl Texture {
             view_formats: &[],
         });
 
-        queue.write_texture(
+        context.queue.write_texture(
             wgpu::ImageCopyTexture {
                 aspect: wgpu::TextureAspect::All,
                 texture: &texture,
@@ -76,7 +75,7 @@ impl Texture {
         );
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+        let sampler = context.device.create_sampler(&wgpu::SamplerDescriptor {
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
             address_mode_w: wgpu::AddressMode::ClampToEdge,
@@ -86,7 +85,7 @@ impl Texture {
             ..Default::default()
         });
 
-        let bind_group = device.create_bind_group(
+        let bind_group = context.device.create_bind_group(
             &wgpu::BindGroupDescriptor {
                 layout: &Renderer::get_texture_layout(),
                 entries: &[
@@ -150,4 +149,11 @@ impl Texture {
     }
 }
 
-impl Asset for Texture {}
+#[async_trait]
+impl Asset for Texture {
+    async fn load(context: &Context, file_path: &str) -> Arc<Self> {
+        let bytes = tokio::fs::read(file_path).await
+            .expect(&format!("Unable to read file: {}", file_path));
+        Arc::new(Texture::from_bytes(&context, &bytes, false).unwrap())
+    }
+}

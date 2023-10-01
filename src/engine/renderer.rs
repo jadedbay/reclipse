@@ -2,7 +2,7 @@ use std::sync::{Mutex, Arc};
 
 use once_cell::sync::Lazy;
 
-use crate::{asset::texture::Texture, objects::{entity::{DrawEntity, Entity}, camera::Camera}};
+use crate::{asset::{texture::Texture, asset_manager::AssetManager}, objects::{entity::{DrawEntity, Entity}, camera::Camera}};
 
 use super::{vertex::Vertex, context::{Context, Surface}};
 
@@ -128,13 +128,16 @@ impl Renderer {
         TRANSFORM_LAYOUT.lock().unwrap().as_ref().unwrap().clone()
     }
 
-    pub fn draw(&mut self, context: &Context, surface: &Surface, camera: &Camera, entity: &Entity) -> Result<(), wgpu::SurfaceError> {
+    pub fn draw(&mut self, context: &Context, surface: &Surface, camera: &Camera, entity: &Entity, asset_manager: &AssetManager) -> Result<(), wgpu::SurfaceError> {
         let output = surface.surface.get_current_texture()?;
         let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
         let mut encoder = context.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("render_encoder")
         });
+
+        let texture = asset_manager.get_texture(&entity.texture);
+        let mesh = asset_manager.get_mesh(&entity.mesh);
 
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -165,7 +168,7 @@ impl Renderer {
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(1, &camera.bind_group, &[]);
 
-            render_pass.draw_entity(entity);
+            render_pass.draw_entity(entity, &texture, &mesh);
         }
     
         context.queue.submit(std::iter::once(encoder.finish()));

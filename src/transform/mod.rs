@@ -69,8 +69,8 @@ impl GpuResource<Transform> {
         
         Self {
             data: transform,
-            buffer,
-            bind_group,
+            buffers: vec![buffer],
+            bind_groups: vec![bind_group],
             context,
         }
     }

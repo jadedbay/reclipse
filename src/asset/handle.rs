@@ -1,17 +1,17 @@
-use std::sync::Arc;
+use std::marker::PhantomData;
 
-use crate::{asset::Asset, engine::renderer::Renderer};
-
-use super::texture::Texture;
+use super::Asset;
 
 pub struct Handle<T: Asset> {
-    pub asset: Arc<T>,
+    pub asset_id: usize,
+    _marker: PhantomData<T>,
 }
 
-impl Handle<Texture> {
-    pub fn new(texture: Arc<Texture>) -> Self {
+impl<T: Asset> Handle<T> {
+    pub fn new(asset_id: usize) -> Self {
         Self {
-            asset: texture,
+            asset_id,
+            _marker: PhantomData,
         }
-    } 
+    }
 }

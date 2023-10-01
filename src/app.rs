@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
+
 use winit::event_loop::ControlFlow;
 
-use crate::{window::{Window, Events}, engine::{context::{Context, Surface}, renderer::Renderer, input::InputState}, asset::{texture::Texture, handle::Handle, mesh_pool::MeshPool, primitives::PrimitiveMesh}, objects::{entity::{Entity, self}, camera::{Camera, Projection, CameraController}}, util::cast_slice};
+use crate::{window::{Window, Events}, engine::{context::{Context, Surface}, renderer::Renderer, input::{InputState, Key}, gpu_resource::GpuResource}, asset::{texture::Texture, handle::Handle, primitives::PrimitiveMesh, asset_manager::{AssetManager, self}}, objects::{entity::{Entity, self}, camera::{Camera, Projection, CameraController}}, util::cast_slice};
 
 pub struct App {
     context: Arc<Context>,
@@ -12,7 +13,7 @@ pub struct App {
     camera_controller: CameraController,
     input: InputState,
 
-    mesh_pool: MeshPool,
+    asset_manager: AssetManager,
 
     entity: Entity,
 }
@@ -21,12 +22,12 @@ impl App {
     pub async fn new(window: &Window) -> Self {
         let (context, surface) = Context::new(window).await;
         let renderer = Renderer::new(&context.device, &surface.config, &surface.extent);
-        let mesh_pool = MeshPool::new(&context);
+        let mut asset_manager = AssetManager::new(context.clone());
         
-        let texture = Arc::new(Texture::from_bytes(&context.device, &context.queue, include_bytes!("../res/textures/stone_bricks.jpg"), "stone_bricks.jpg", false).unwrap());
-        let mesh = mesh_pool.get_mesh(PrimitiveMesh::Quad as usize);
+        let texture = asset_manager.get_asset_handle::<Texture>("res/textures/stone_bricks.jpg");
+        let mesh = asset_manager.get_primitive(PrimitiveMesh::Quad);
 
-        let entity = Entity::new(Handle::new(texture), mesh);
+        let entity = Entity::new(texture, mesh);
         
         let camera = Camera::new(&context.device, &Renderer::get_camera_layout(), (0.0, 0.0, 5.0), cg::Deg(-90.0), cg::Deg(0.0), 
             Projection::new(surface.config.width, surface.config.height, cg::Deg(45.0), 0.1, 100.0));
@@ -42,7 +43,7 @@ impl App {
             camera_controller,
             input,
 
-            mesh_pool,
+            asset_manager,
 
             entity,
         }
@@ -63,10 +64,12 @@ impl App {
         self.camera_controller.update_camera(&mut self.camera, dt, &self.input);
         self.camera.update_uniform();
         self.context.queue.write_buffer(&self.camera.buffer, 0, cast_slice(&[self.camera.uniform]));
+
+        self.asset_manager.process_pending();
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
-        self.renderer.draw(&self.context, &self.surface, &self.camera, &self.entity)
+        self.renderer.draw(&self.context, &self.surface, &self.camera, &self.entity, &self.asset_manager)
     }
 }
 
@@ -87,6 +90,11 @@ pub async fn run() {
             last_render_time = now;
             
             app.update(dt);
+
+            if app.input.key_down(Key::H) {
+                let texture = app.asset_manager.get_asset_handle::<Texture>("res/textures/test.jpg");
+                app.entity.texture = texture;
+            }
 
             match app.render() {
                 Ok(_) => {}

@@ -1,6 +1,11 @@
+use std::sync::Arc;
+
+use async_trait::async_trait;
 use wgpu::util::DeviceExt;
 
 use crate::{engine::{vertex::Vertex, context::Context}, util::cast_slice};
+
+use super::{Asset, primitives::quad};
 
 pub struct Mesh {
     pub vertex_buffer: wgpu::Buffer,
@@ -31,6 +36,16 @@ impl Mesh {
             index_buffer,
             index_count: indices.len() as u32,
         }
+    }
+
+    
+}
+
+#[async_trait]
+impl Asset for Mesh {
+    //TODO: CREATE LOAD MESH FN ABOVE AND USE IT HERE
+    async fn load(context: &Context, _file_path: &str) -> Arc<Self> {
+        Arc::new(Mesh::new(context, quad::VERTICES, quad::INDICES))
     }
 }
 
