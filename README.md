@@ -1,6 +1,6 @@
 # Reclipse
 
-Reclipse is a Rust library for creating 3D applications. 
+WIP Rust game engine.
 
 ## Usage
 
