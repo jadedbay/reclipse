@@ -1,6 +1,6 @@
-use std::{sync::{Arc, mpsc::{self, Receiver}}, collections::{HashMap, HashSet}, any::TypeId, pin::Pin};
+use std::{sync::{Arc, mpsc::{self, Receiver}}, collections::HashMap, any::TypeId};
 
-use futures::{Future, FutureExt};
+use futures::FutureExt;
 
 use crate::engine::context::Context;
 
@@ -43,7 +43,7 @@ impl AssetManager {
         }
     }
 
-    pub fn get_asset_handle<T: Asset + 'static>(&mut self, file_path: &str) -> Handle<T> {
+    pub fn get_handle<T: Asset + 'static>(&mut self, file_path: &str) -> Handle<T> {
         let file_path = file_path.to_owned();
 
         if let Some(&asset_id) = self.paths.get(&file_path) {
@@ -102,8 +102,12 @@ impl AssetManager {
         self.meshes.get(handle.asset_id)
     }
 
-    pub fn get_primitive(&self, primitive_mesh: PrimitiveMesh) -> Handle<Mesh> {
+    pub fn get_primitive_handle(&self, primitive_mesh: PrimitiveMesh) -> Handle<Mesh> {
         Handle::<Mesh>::new(primitive_mesh as usize)
+    }
+
+    pub fn get_primitive_mesh(&self, primitive_mesh: PrimitiveMesh) -> Arc<Mesh> {
+        self.meshes.get(primitive_mesh as usize)
     }
 
     fn get_new_id(&mut self) -> usize {

@@ -13,9 +13,10 @@ pub struct Transform {
 }
 
 impl Transform {
-    pub fn new(position: glam::Vec3, rotation: glam::Quat, scale: f32) -> Self {
+    pub fn new(position: glam::Vec3, rotation: glam::Vec3, scale: f32) -> Self {
+        let rotation = glam::Quat::from_euler(glam::EulerRot::YXZ, rotation.y.to_radians(), rotation.x.to_radians(), rotation.z.to_radians());
         let matrix = glam::Mat4::from_scale_rotation_translation(glam::Vec3::splat(scale), rotation, position);
-
+        
         Self {
             position,
             rotation,
@@ -27,7 +28,7 @@ impl Transform {
 
 impl Default for Transform {
     fn default() -> Self {
-        let position = glam::vec3(0.0, 0.0, 0.0);
+        let position = glam::Vec3::ZERO;
         let rotation = glam::Quat::IDENTITY;
         let scale = 1.0;
 

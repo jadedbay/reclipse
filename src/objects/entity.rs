@@ -1,6 +1,4 @@
-use std::sync::Arc;
-
-use crate::{asset::{handle::Handle, texture::Texture, mesh::{Mesh, DrawMesh}}, engine::{context::Context, gpu_resource::GpuResource}, transform::Transform};
+use crate::{asset::{handle::Handle, texture::Texture, mesh::{Mesh, DrawMesh}}, engine::gpu_resource::GpuResource, transform::Transform};
 
 pub struct Entity {
     pub transform: GpuResource<Transform>,
@@ -9,8 +7,7 @@ pub struct Entity {
 }
 
 impl Entity {
-    pub fn new(context: Arc<Context>, transform: Transform, texture: Handle<Texture>, mesh: Handle<Mesh>, ) -> Self {
-        let transform = GpuResource::new(context, transform);
+    pub fn new(transform: GpuResource<Transform>, texture: Handle<Texture>, mesh: Handle<Mesh>, ) -> Self {
         
         Self {
             transform,

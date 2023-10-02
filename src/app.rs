@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use winit::event_loop::ControlFlow;
 
-use crate::{window::{Window, Events}, engine::{context::{Context, Surface}, renderer::Renderer, input::{InputState, Key}, gpu_resource::GpuResource}, asset::{texture::Texture, handle::Handle, primitives::PrimitiveMesh, asset_manager::{AssetManager, self}}, objects::{entity::{Entity, self}, camera::{Camera, Projection, CameraController}}, util::cast_slice, transform::Transform};
+use crate::{window::{Window, Events}, engine::{context::{Context, Surface}, renderer::Renderer, input::{InputState, Key}, gpu_resource::GpuResource}, asset::{texture::Texture, handle::Handle, primitives::PrimitiveMesh, asset_manager::{AssetManager, self}}, objects::{entity::{Entity, self}, camera::{Camera, Projection, CameraController}}, util::cast_slice, transform::Transform, scene::Scene};
 
 pub struct App {
     context: Arc<Context>,
@@ -15,7 +15,7 @@ pub struct App {
 
     asset_manager: AssetManager,
 
-    entity: Entity,
+    scene: Scene,
 }
 
 impl App {
@@ -24,11 +24,17 @@ impl App {
         let renderer = Renderer::new(&context.device, &surface.config, &surface.extent);
         let mut asset_manager = AssetManager::new(context.clone());
         
-        let texture = asset_manager.get_asset_handle::<Texture>("res/textures/stone_bricks.jpg");
-        let mesh = asset_manager.get_primitive(PrimitiveMesh::Quad);
+        let texture = asset_manager.get_handle::<Texture>("res/textures/stone_bricks.jpg");
+        let mesh = asset_manager.get_primitive_handle(PrimitiveMesh::Quad);
+        let mut transform = Transform::new(glam::Vec3::ZERO, glam::Vec3::ZERO, 1.0);
 
-        let transform = Transform::new(glam::vec3(0.0, 0.0, 0.0), glam::Quat::IDENTITY, 1.0);
-        let entity = Entity::new(context.clone(), transform, texture, mesh);
+        let mut scene = Scene::new(context.clone());
+        scene.create_entity(transform, texture.clone() , mesh.clone());
+
+        transform = Transform::new(glam::vec3(0.0, -0.5, 0.0), glam::vec3(90.0, 0.0, 0.0), 1.0);
+        scene.create_entity(transform, texture.clone(), mesh.clone());
+
+        
         
         let camera = Camera::new(&context.device, &Renderer::get_camera_layout(), glam::vec3(0.0, 0.0, 5.0), -90.0, 0.0, 
             Projection::new(surface.config.width, surface.config.height, 45.0, 0.1, 100.0));
@@ -46,7 +52,7 @@ impl App {
 
             asset_manager,
 
-            entity,
+            scene,
         }
     }
 
@@ -70,7 +76,7 @@ impl App {
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
-        self.renderer.draw(&self.context, &self.surface, &self.camera, &self.entity, &self.asset_manager)
+        self.renderer.draw(&self.context, &self.surface, &self.camera, &self.scene, &self.asset_manager)
     }
 }
 
@@ -93,8 +99,8 @@ pub async fn run() {
             app.update(dt);
 
             if app.input.key_down(Key::H) {
-                let texture = app.asset_manager.get_asset_handle::<Texture>("res/textures/test.jpg");
-                app.entity.texture = texture;
+                let texture = app.asset_manager.get_handle::<Texture>("res/textures/test.jpg");
+                app.scene.entities[0].texture = texture;
             }
 
             match app.render() {

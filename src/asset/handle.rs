@@ -14,4 +14,8 @@ impl<T: Asset> Handle<T> {
             _marker: PhantomData,
         }
     }
+
+    pub fn clone(&self) -> Handle<T> {
+        Self::new(self.asset_id)
+    }
 }
