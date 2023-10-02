@@ -44,10 +44,11 @@ impl AssetManager {
     }
 
     pub fn get_asset_handle<T: Asset + 'static>(&mut self, file_path: &str) -> Handle<T> {
-        if let Some(&asset_id) = self.paths.get(file_path) {
+        let file_path = file_path.to_owned();
+
+        if let Some(&asset_id) = self.paths.get(&file_path) {
             Handle::<T>::new(asset_id)
         } else {
-            let file_path = file_path.to_owned();
             let asset_id = self.get_new_id();
             self.paths.insert(file_path.clone(), asset_id);
 
@@ -55,25 +56,20 @@ impl AssetManager {
             let (tx, rx) = mpsc::channel();
             self.pending.push(rx);
 
-            println!("loading: {}", &file_path);
-
-            match TypeId::of::<T>() {
-                id if id == TypeId::of::<Texture>() => {
-                    let future = async move {
+            let future = async move {
+                match TypeId::of::<T>() {
+                    id if id == TypeId::of::<Texture>() => {
                         let texture = Texture::load(&context, &file_path).await;
                         tx.send((asset_id, AssetType::Texture(texture))).unwrap();
-                    }.boxed();
-                    tokio::spawn(future);
-                },
-                id if id == TypeId::of::<Mesh>() => {
-                    let future = async move {
+                    },
+                    id if id == TypeId::of::<Mesh>() => {
                         let mesh = Mesh::load(&context, &file_path).await;
                         tx.send((asset_id, AssetType::Mesh(mesh))).unwrap();
-                    }.boxed();
-                    tokio::spawn(future);
-                },
-                _ => panic!("Invalid asset type"),
-            }
+                    },
+                    _ => panic!("Invalid asset type"),
+                }
+            }.boxed();
+            tokio::spawn(future);
 
             Handle::<T>::new(asset_id)
         }

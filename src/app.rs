@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use winit::event_loop::ControlFlow;
 
-use crate::{window::{Window, Events}, engine::{context::{Context, Surface}, renderer::Renderer, input::{InputState, Key}, gpu_resource::GpuResource}, asset::{texture::Texture, handle::Handle, primitives::PrimitiveMesh, asset_manager::{AssetManager, self}}, objects::{entity::{Entity, self}, camera::{Camera, Projection, CameraController}}, util::cast_slice};
+use crate::{window::{Window, Events}, engine::{context::{Context, Surface}, renderer::Renderer, input::{InputState, Key}, gpu_resource::GpuResource}, asset::{texture::Texture, handle::Handle, primitives::PrimitiveMesh, asset_manager::{AssetManager, self}}, objects::{entity::{Entity, self}, camera::{Camera, Projection, CameraController}}, util::cast_slice, transform::Transform};
 
 pub struct App {
     context: Arc<Context>,
@@ -27,10 +27,11 @@ impl App {
         let texture = asset_manager.get_asset_handle::<Texture>("res/textures/stone_bricks.jpg");
         let mesh = asset_manager.get_primitive(PrimitiveMesh::Quad);
 
-        let entity = Entity::new(texture, mesh);
+        let transform = Transform::new(glam::vec3(0.0, 0.0, 0.0), glam::Quat::IDENTITY, 1.0);
+        let entity = Entity::new(context.clone(), transform, texture, mesh);
         
-        let camera = Camera::new(&context.device, &Renderer::get_camera_layout(), (0.0, 0.0, 5.0), cg::Deg(-90.0), cg::Deg(0.0), 
-            Projection::new(surface.config.width, surface.config.height, cg::Deg(45.0), 0.1, 100.0));
+        let camera = Camera::new(&context.device, &Renderer::get_camera_layout(), glam::vec3(0.0, 0.0, 5.0), -90.0, 0.0, 
+            Projection::new(surface.config.width, surface.config.height, 45.0, 0.1, 100.0));
         let camera_controller = CameraController::new(4.0, 0.5);
 
         let input = InputState::default();

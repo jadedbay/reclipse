@@ -9,9 +9,9 @@ pub struct InputState {
     pub down_keys: HashSet<Key>,
     pub pressed_mouse_buttons: HashSet<MouseButton>,
     pub down_mouse_buttons: HashSet<MouseButton>,
-    pub cursor_delta: cg::Vector2<f32>,
-    pub cursor_pos: cg::Vector2<f32>,
-    pub scroll_delta: cg::Vector2<f32>,
+    pub cursor_delta: glam::Vec2,
+    pub cursor_pos: glam::Vec2,
+    pub scroll_delta: glam::Vec2,
 }
 
 impl Default for InputState {
@@ -21,9 +21,9 @@ impl Default for InputState {
             down_keys: HashSet::default(),
             pressed_mouse_buttons: HashSet::default(),
             down_mouse_buttons: HashSet::default(),
-            cursor_delta: cg::Vector2::new(0.0, 0.0),
-            cursor_pos: cg::Vector2::new(0.0, 0.0),
-            scroll_delta: cg::Vector2::new(0.0, 0.0),
+            cursor_delta: glam::Vec2::ZERO,
+            cursor_pos: glam::Vec2::ZERO,
+            scroll_delta: glam::Vec2::ZERO,
         }
     }
 }
@@ -56,8 +56,8 @@ impl InputState {
     pub fn finish_frame(&mut self) {
         self.pressed_keys.clear();
         self.pressed_mouse_buttons.clear();
-        self.cursor_delta = cg::Vector2::new(0.0, 0.0);
-        self.scroll_delta = cg::Vector2::new(0.0, 0.0);
+        self.cursor_delta = glam::Vec2::ZERO;
+        self.scroll_delta = glam::Vec2::ZERO;
     }
 
     pub fn update_keyboard(&mut self, state: ElementState, key: Option<Key>) {
@@ -85,12 +85,12 @@ impl InputState {
         };
     }
 
-    pub fn update_mouse_motion(&mut self, delta: cg::Vector2<f32>) {
+    pub fn update_mouse_motion(&mut self, delta: glam::Vec2) {
         self.cursor_pos += delta;
         self.cursor_delta += delta;
     }
 
-    pub fn update_mouse_wheel(&mut self, delta: cg::Vector2<f32>) {
+    pub fn update_mouse_wheel(&mut self, delta: glam::Vec2) {
         self.scroll_delta += delta;
     }
 
@@ -131,8 +131,8 @@ impl InputState {
                     }
                     DeviceEvent::MouseWheel { delta } => {
                         let delta = match *delta {
-                            MouseScrollDelta::PixelDelta(pos) => cg::Vector2::new(pos.x as f32, pos.y as f32),
-                            MouseScrollDelta::LineDelta(x, y) => cg::Vector2::new(x, y),
+                            MouseScrollDelta::PixelDelta(pos) => glam::vec2(pos.x as f32, pos.y as f32),
+                            MouseScrollDelta::LineDelta(x, y) => glam::vec2(x, y),
                         };
                         self.scroll_delta += delta;
                     }

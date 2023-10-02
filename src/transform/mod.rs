@@ -5,17 +5,17 @@ use wgpu::util::DeviceExt;
 use crate::{engine::{gpu_resource::GpuResource, renderer::Renderer, context::Context}, util::cast_slice};
 
 pub struct Transform {
-    position: cg::Vector3<f32>,
-    rotation: cg::Quaternion<f32>,
+    position: glam::Vec3,
+    rotation: glam::Quat,
     scale: f32,
 
-    matrix: cg::Matrix4<f32>,
+    matrix: glam::Mat4,
 }
 
 impl Transform {
-    pub fn new(position: cg::Vector3<f32>, rotation: cg::Quaternion<f32>, scale: f32) -> Self {
-        let matrix = calculate_transform_matrix(position, rotation, scale);
-        
+    pub fn new(position: glam::Vec3, rotation: glam::Quat, scale: f32) -> Self {
+        let matrix = glam::Mat4::from_scale_rotation_translation(glam::Vec3::splat(scale), rotation, position);
+
         Self {
             position,
             rotation,
@@ -25,19 +25,13 @@ impl Transform {
     }
 }
 
-fn calculate_transform_matrix(position: cg::Vector3<f32>, rotation: cg::Quaternion<f32>, scale: f32) -> cg::Matrix4<f32> {
-    cg::Matrix4::from_translation(position) *
-    cg::Matrix4::from_scale(scale) *
-    cg::Matrix4::from(rotation)
-}
-
 impl Default for Transform {
     fn default() -> Self {
-        let position = cg::vec3(0.0, 0.0, 0.0);
-        let rotation = cg::Quaternion::new(1.0, 0.0, 0.0, 0.0);
+        let position = glam::vec3(0.0, 0.0, 0.0);
+        let rotation = glam::Quat::IDENTITY;
         let scale = 1.0;
 
-        let matrix = calculate_transform_matrix(position, rotation, scale);
+        let matrix = glam::Mat4::from_scale_rotation_translation(glam::Vec3::splat(scale), rotation, position);
 
         Self {
             position,

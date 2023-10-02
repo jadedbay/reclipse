@@ -87,8 +87,9 @@ impl Renderer {
         let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
             bind_group_layouts: &[
-                &texture_layout.as_ref().unwrap(),
                 &camera_layout.as_ref().unwrap(),
+                &texture_layout.as_ref().unwrap(),
+                &transform_layout.as_ref().unwrap(),
             ],
             push_constant_ranges: &[],
         });
@@ -166,7 +167,7 @@ impl Renderer {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_bind_group(1, &camera.bind_group, &[]);
+            render_pass.set_bind_group(0, &camera.bind_group, &[]);
 
             render_pass.draw_entity(entity, &texture, &mesh);
         }

@@ -55,12 +55,12 @@ impl Window {
                 },
                 Event::DeviceEvent { event, .. } => match event {
                     DeviceEvent::MouseMotion { delta } => {
-                        callback(Events::MouseMotion { delta: cg::vec2(delta.0 as f32, delta.1 as f32) }, None, None)
+                        callback(Events::MouseMotion { delta: glam::vec2(delta.0 as f32, delta.1 as f32) }, None, None)
                     }
                     DeviceEvent::MouseWheel { delta } => {
                         let delta = match delta {
-                            MouseScrollDelta::PixelDelta(pos) => cg::Vector2::new(pos.x as f32, pos.y as f32),
-                            MouseScrollDelta::LineDelta(x, y) => cg::Vector2::new(x, y),
+                            MouseScrollDelta::PixelDelta(pos) => glam::vec2(pos.x as f32, pos.y as f32),
+                            MouseScrollDelta::LineDelta(x, y) => glam::vec2(x, y),
                         };
                         callback(Events::MouseWheel { delta }, None, None)
                     }
@@ -93,9 +93,9 @@ pub enum Events {
         button: MouseButton,
     },
     MouseMotion {
-        delta: cg::Vector2<f32>,
+        delta: glam::Vec2,
     },
     MouseWheel {
-        delta: cg::Vector2<f32>,
+        delta: glam::Vec2,
     }
 }

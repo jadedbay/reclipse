@@ -2,27 +2,19 @@ use wgpu::util::DeviceExt;
 
 use std::f32::consts::FRAC_PI_2;
 
-use cg::{InnerSpace, SquareMatrix};
 use instant::Duration;
 
 use crate::util::cast_slice;
 
 use crate::engine::input::{InputState, Key};
 
-pub const OPENGL_TO_WGPU_MATRIX: cg::Matrix4<f32> = cg::Matrix4::new(
-    1.0, 0.0, 0.0, 0.0,
-    0.0, 1.0, 0.0, 0.0,
-    0.0, 0.0, 0.5, 0.0,
-    0.0, 0.0, 0.5, 1.0,
-);
-
 const SAFE_FRAC_PI_2: f32 = FRAC_PI_2 - 0.0001;
 
 
 pub struct Camera {
-    pub position: cg::Point3<f32>,
-    pub yaw: cg::Rad<f32>,
-    pub pitch: cg::Rad<f32>,
+    pub position: glam::Vec3,
+    pub yaw: f32,
+    pub pitch: f32,
     pub projection: Projection,
     pub uniform: CameraUniform,
     pub buffer: wgpu::Buffer,
@@ -30,11 +22,14 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn new<
-        V: Into<cg::Point3<f32>>,
-        Y: Into<cg::Rad<f32>>,
-        P: Into<cg::Rad<f32>>,
-    >(device: &wgpu::Device, camera_bind_group_layout: &wgpu::BindGroupLayout, position: V, yaw: Y, pitch: P, projection: Projection) -> Self {
+    pub fn new(
+        device: &wgpu::Device, 
+        camera_bind_group_layout: &wgpu::BindGroupLayout, 
+        position: glam::Vec3, 
+        yaw: f32, 
+        pitch: f32, 
+        projection: Projection
+    ) -> Self {
         let camera_uniform = CameraUniform::new();
 
         let camera_buffer = device.create_buffer_init(
@@ -57,9 +52,9 @@ impl Camera {
         });
 
         Self {
-            position: position.into(),
-            yaw: yaw.into(),
-            pitch: pitch.into(),
+            position,
+            yaw: yaw.to_radians(),
+            pitch: pitch.to_radians(),
             projection,
             uniform: camera_uniform,
             buffer: camera_buffer,
@@ -72,40 +67,40 @@ impl Camera {
         self.uniform.update(&self.position, view_proj);
     }
 
-    pub fn calc_matrix(&self) -> cg::Matrix4<f32> {
-        let (sin_pitch, cos_pitch) = self.pitch.0.sin_cos();
-        let (sin_yaw, cos_yaw) = self.yaw.0.sin_cos();
+    pub fn calc_matrix(&self) -> glam::Mat4 {
+        let (sin_pitch, cos_pitch) = self.pitch.sin_cos();
+        let (sin_yaw, cos_yaw) = self.yaw.sin_cos();
 
-        cg::Matrix4::look_to_rh(
+        glam::Mat4::look_to_rh(
             self.position,
-            cg::Vector3::new(
+            glam::Vec3::new(
                 cos_pitch * cos_yaw,
                 sin_pitch,
                 cos_pitch * sin_yaw
             ).normalize(),
-            cg::Vector3::unit_y(),
+            glam::Vec3::Y,
         )
     }
 }
 
 pub struct Projection {
     pub aspect: f32,
-    fovy: cg::Rad<f32>,
+    fovy: f32,
     znear: f32,
     zfar: f32,
 }
 
 impl Projection {
-    pub fn new<F: Into<cg::Rad<f32>>>(
+    pub fn new(
         width: u32,
         height: u32,
-        fovy: F,
+        fovy: f32,
         znear: f32,
         zfar: f32,
     ) -> Self {
         Self {
             aspect: width as f32 / height as f32,
-            fovy: fovy.into(),
+            fovy: fovy.to_radians(),
             znear,
             zfar,
         }
@@ -115,8 +110,8 @@ impl Projection {
         self.aspect = width as f32 / height as f32;
     }
 
-    pub fn calc_matrix(&self) -> cg::Matrix4<f32> {
-        cg::perspective(self.fovy, self.aspect, self.znear, self.zfar)
+    pub fn calc_matrix(&self) -> glam::Mat4 {
+        glam::Mat4::perspective_rh(self.fovy, self.aspect, self.znear, self.zfar)
     }
 }
 
@@ -124,20 +119,20 @@ impl Projection {
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct CameraUniform {
-    pub view_position: cg::Vector4<f32>,
-    pub view_proj: cg::Matrix4<f32>,
+    pub view_position: glam::Vec4,
+    pub view_proj: glam::Mat4,
 }
 
 impl CameraUniform {
     pub fn new() -> Self {
         Self {
-            view_position: cg::Vector4::new(0.0, 0.0, 0.0, 0.0),
-            view_proj: cg::Matrix4::identity(),
+            view_position: glam::Vec4::new(0.0, 0.0, 0.0, 0.0),
+            view_proj: glam::Mat4::IDENTITY,
         }
     }
 
-    pub fn update(&mut self, eye: &cg::Point3<f32>, view_proj: cg::Matrix4<f32>) {
-        self.view_position = eye.to_homogeneous();
+    pub fn update(&mut self, eye: &glam::Vec3, view_proj: glam::Mat4) {
+        self.view_position = eye.extend(1.0);
         self.view_proj = view_proj;
     }
 }
@@ -152,7 +147,6 @@ pub struct CameraController {
     amount_down: f32,
     rotate_horizontal: f32,
     rotate_vertical: f32,
-    scroll: f32,
     speed: f32,
     sensitivity: f32,
 }
@@ -168,7 +162,6 @@ impl CameraController {
             amount_down: 0.0,
             rotate_horizontal: 0.0,
             rotate_vertical: 0.0,
-            scroll: 0.0,
             speed,
             sensitivity,
         }
@@ -196,29 +189,24 @@ impl CameraController {
         
         let dt = dt.as_secs_f32();
 
-        let (yaw_sin, yaw_cos) = camera.yaw.0.sin_cos();
-        let forward = cg::Vector3::new(yaw_cos, 0.0, yaw_sin).normalize();
-        let right = cg::Vector3::new(-yaw_sin, 0.0, yaw_cos).normalize();
+        let (yaw_sin, yaw_cos) = camera.yaw.sin_cos();
+        let forward = glam::Vec3::new(yaw_cos, 0.0, yaw_sin).normalize();
+        let right = glam::Vec3::new(-yaw_sin, 0.0, yaw_cos).normalize();
         camera.position += forward * (self.amount_forward - self.amount_backward) * self.speed * dt;
         camera.position += right * (self.amount_right - self.amount_left) * self.speed * dt;
 
-        let (pitch_sin, pitch_cos) = camera.pitch.0.sin_cos();
-        let scrollward = cg::Vector3::new(pitch_cos * yaw_cos, pitch_sin, pitch_cos * yaw_sin).normalize();
-        camera.position += scrollward * self.scroll * self.speed * self.sensitivity * dt;
-        self.scroll = 0.0;
-
         camera.position.y += (self.amount_up - self.amount_down) * self.speed * dt;
 
-        camera.yaw += cg::Rad(self.rotate_horizontal) * self.sensitivity * dt;
-        camera.pitch += cg::Rad(-self.rotate_vertical) * self.sensitivity * dt;
+        camera.yaw += self.rotate_horizontal * self.sensitivity * dt;
+        camera.pitch += -self.rotate_vertical * self.sensitivity * dt;
 
         self.rotate_horizontal = 0.0;
         self.rotate_vertical = 0.0;
 
-        if camera.pitch < -cg::Rad(SAFE_FRAC_PI_2) {
-            camera.pitch = -cg::Rad(SAFE_FRAC_PI_2);
-        } else if camera.pitch > cg::Rad(SAFE_FRAC_PI_2) {
-            camera.pitch = cg::Rad(SAFE_FRAC_PI_2);
+        if camera.pitch < -SAFE_FRAC_PI_2 {
+            camera.pitch = -SAFE_FRAC_PI_2;
+        } else if camera.pitch > SAFE_FRAC_PI_2 {
+            camera.pitch = SAFE_FRAC_PI_2;
         }
     }
 }
