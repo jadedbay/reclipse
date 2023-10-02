@@ -80,10 +80,8 @@ impl App {
     }
 }
 
-pub async fn run() {
+pub async fn run(window: Window, mut app: App) {
     env_logger::init();
-    let window = Window::new();
-    let mut app = App::new(&window).await;
 
     let mut last_render_time = instant::Instant::now();
 
