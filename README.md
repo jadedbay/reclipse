@@ -6,8 +6,10 @@ WIP Rust game engine.
 
 First, clone the repository from GitHub. Then, include it in your `Cargo.toml` dependencies as follows:
 
+```rust
 [dependencies]
 reclipse = { path = "path/to/reclipse" }
+```
 
 Then, in your main.rs file, use the library as follows:
 
