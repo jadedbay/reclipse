@@ -2,10 +2,12 @@ use std::{sync::{Mutex, Arc}, collections::HashMap};
 
 use once_cell::sync::Lazy;
 
-use crate::{asset::{texture::Texture, asset_manager::{AssetManager, self}, primitives::PrimitiveMesh, handle::Handle}, objects::{entity::{DrawEntity, Entity}, camera::Camera}, scene::Scene};
+use crate::{asset::{texture::Texture, asset_manager::{AssetManager, self}, primitives::PrimitiveMesh, handle::Handle}, objects::{entity::DrawEntity, camera::Camera}, scene::Scene, transform::Transform};
 
-use super::{vertex::Vertex, context::{Context, Surface}};
+use super::{vertex::Vertex, context::{Context, Surface}, gpu_resource::GpuResource};
+use bevy_ecs::prelude::*;
 
+#[derive(Component)]
 pub struct Renderer {
     pub clear_color: wgpu::Color,
     pub texture_view: wgpu::TextureView,
@@ -68,7 +70,8 @@ impl Renderer {
         })));
 
         let mut transform_layout = TRANSFORM_LAYOUT.lock().unwrap();
-        *transform_layout = Some(Arc::new(device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        *transform_layout = Some(Arc::new(device.create_bind_group_layout(
+            &wgpu::BindGroupLayoutDescriptor {
             entries: &[
                 wgpu::BindGroupLayoutEntry {
                     binding: 0,
@@ -129,7 +132,7 @@ impl Renderer {
         TRANSFORM_LAYOUT.lock().unwrap().as_ref().unwrap().clone()
     }
 
-    pub fn draw(&mut self, context: &Context, surface: &Surface, camera: &Camera, scene: &Scene, asset_manager: &AssetManager) -> Result<(), wgpu::SurfaceError> {
+    pub fn draw(&mut self, context: &Context, surface: &Surface, camera: &Camera, transform: &GpuResource<Transform>, entity: &Entity, asset_manager: &AssetManager) -> Result<(), wgpu::SurfaceError> {
         let output = surface.surface.get_current_texture()?;
         let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
@@ -137,11 +140,9 @@ impl Renderer {
             label: Some("render_encoder")
         });
 
-        let mut texture_entity_map: HashMap<usize, (Arc<Texture>, Vec<&Entity>)> = HashMap::new();
-        for entity in &scene.entities {
-            let texture = asset_manager.get_texture(&entity.texture);
-            texture_entity_map.entry(entity.texture.asset_id).or_insert_with(|| (texture.clone(), Vec::new())).1.push(entity);
-        }
+        
+        let texture_handle = entity.get_component::<Handle<Texture>>().unwrap();
+        let texture = asset_manager.get_texture(texture_handle);
 
         let mesh = asset_manager.get_primitive_mesh(PrimitiveMesh::Quad);
 
@@ -174,12 +175,7 @@ impl Renderer {
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &camera.bind_group, &[]);
 
-            for (_, (texture, entities)) in &texture_entity_map {
-                render_pass.set_bind_group(1, &texture.bind_group.as_ref().unwrap(), &[]);
-                for entity in entities {
-                    render_pass.draw_entity(entity, &texture, &mesh);
-                }
-            }
+            render_pass.draw_entity(transform, &texture, &mesh);
         }
     
         context.queue.submit(std::iter::once(encoder.finish()));

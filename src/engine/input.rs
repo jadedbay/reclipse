@@ -1,9 +1,11 @@
 use std::collections::HashSet;
 use winit::event::*;
+use bevy_ecs::prelude::*;
 
 pub type Key = winit::event::VirtualKeyCode;
 pub type MouseButton = winit::event::MouseButton;
 
+#[derive(Resource)]
 pub struct InputState {
     pub pressed_keys: HashSet<Key>,
     pub down_keys: HashSet<Key>,
@@ -94,9 +96,9 @@ impl InputState {
         self.scroll_delta += delta;
     }
 
-    pub fn update<T>(&mut self, event: &Event<T>) -> bool {
+    pub fn update<T>(&mut self, event: &winit::event::Event<T>) -> bool {
             match event {
-                Event::WindowEvent { event, .. } => match event {
+                winit::event::Event::WindowEvent { event, .. } => match event {
                     WindowEvent::KeyboardInput { input, .. } => {
                         match (input.virtual_keycode, input.state == ElementState::Pressed) {
                             (Some(key), true) => {
@@ -122,7 +124,7 @@ impl InputState {
                     }
                     _ => return false,
                 },
-                Event::DeviceEvent { event, .. } => match event {
+                winit::event::Event::DeviceEvent { event, .. } => match event {
                     DeviceEvent::MouseMotion { delta } => {
                         self.cursor_pos.x += delta.0 as f32;
                         self.cursor_pos.y += delta.1 as f32;

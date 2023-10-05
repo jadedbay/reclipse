@@ -5,12 +5,14 @@ use futures::FutureExt;
 use crate::engine::context::Context;
 
 use super::{pools::AssetPool, mesh::Mesh, texture::Texture, handle::Handle, Asset, primitives::PrimitiveMesh};
+use bevy_ecs::prelude::*;
 
 enum AssetType {
     Texture(Arc<Texture>),
     Mesh(Arc<Mesh>),
 }
 
+#[derive(Resource, Default)]
 pub struct AssetManager {
     context: Arc<Context>,
 

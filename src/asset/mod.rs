@@ -14,6 +14,10 @@ pub mod primitives;
 
 pub mod handle;
 
+pub use texture::Texture;
+pub use mesh::Mesh;
+
+
 #[async_trait]
 pub trait Asset {
     async fn load(context: &Context, file_path: &str) -> Arc<Self>;

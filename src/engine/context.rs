@@ -2,6 +2,9 @@ use std::sync::Arc;
 
 use crate::window::Window;
 
+use bevy_ecs::prelude::*;
+
+#[derive(Resource)]
 pub struct Context {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
